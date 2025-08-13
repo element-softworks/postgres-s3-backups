@@ -4,7 +4,11 @@ export const env = envsafe({
   AWS_ACCESS_KEY_ID: str(),
   AWS_SECRET_ACCESS_KEY: str(),
   AWS_S3_BUCKET: str(),
-  AWS_S3_REGION: str(),
+  AWS_S3_REGION: str({
+    desc: 'The AWS region to use for the S3 bucket.',
+    default: 'eu-west-2',
+    allowEmpty: true,
+  }),
   BACKUP_DATABASE_URL: str({
     desc: 'The connection string of the database to backup.'
   }),
@@ -28,28 +32,32 @@ export const env = envsafe({
     default: false,
     allowEmpty: true,
   }),
-  BACKUP_FILE_PREFIX: str({
-    desc: 'Prefix to the file name',
-    default: 'backup',
-  }),
-  BUCKET_SUBFOLDER: str({
-    desc: 'A subfolder to place the backup files in',
-    default: '',
-    allowEmpty: true
-  }),
   SINGLE_SHOT_MODE: bool({
     desc: 'Run a single backup on start and exit when completed',
-    default: false,
+    default: true,
     allowEmpty: true,
   }),
   // This is both time consuming and resource intensive so we leave it disabled by default
   SUPPORT_OBJECT_LOCK: bool({
     desc: 'Enables support for buckets with object lock by providing an MD5 hash with the backup file',
-    default: false
+    default: true,
+    allowEmpty: true,
   }),
   BACKUP_OPTIONS: str({
     desc: 'Any valid pg_dump option.',
     default: '',
     allowEmpty: true,
+  }),
+  BACKUP_PRODUCT: str({
+    desc: 'The product being backed up',
+    example: 'my-product',
+  }),
+  BACKUP_ENV: str({
+    desc: 'The environment being backed up (staging / uat / prod)',
+    example: 'prod',
+  }),
+  BACKUP_FREQUENCY: str({
+    desc: 'The frequency of the backup (daily / weekly / monthly)',
+    example: 'daily',
   }),
 })
