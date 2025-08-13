@@ -21,13 +21,19 @@ const uploadToS3 = async ({ name, path }: { name: string, path: string }) => {
 
   if (env.AWS_S3_ENDPOINT) {
     console.log(`Using custom endpoint: ${env.AWS_S3_ENDPOINT}`);
-
     clientOptions.endpoint = env.AWS_S3_ENDPOINT;
   }
 
   if (env.BUCKET_SUBFOLDER) {
     name = env.BUCKET_SUBFOLDER + "/" + name;
   }
+
+  // Log the exact AWS S3 location
+  const location = env.AWS_S3_ENDPOINT
+    ? `${env.AWS_S3_ENDPOINT}/${bucket}/${name}`
+    : `https://s3.${env.AWS_S3_REGION}.amazonaws.com/${bucket}/${name}`;
+  
+  console.log(`File will be uploaded to: ${location}`);
 
   let params: PutObjectCommandInput = {
     Bucket: bucket,
