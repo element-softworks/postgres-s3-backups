@@ -2,19 +2,28 @@ ARG NODE_VERSION='20.11.1'
 
 FROM node:${NODE_VERSION}-alpine AS build
 
-ENV NPM_CONFIG_UPDATE_NOTIFIER=false
-ENV NPM_CONFIG_FUND=false
+# Install pnpm globally
+RUN npm install -g pnpm
+
+ENV PNPM_HOME="/root/.local/share/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
 
 WORKDIR /app
 
 COPY package*.json tsconfig.json ./
 COPY src ./src
 
-RUN npm ci && \
-    npm run build && \
-    npm prune --production
+RUN pnpm install --frozen-lockfile && \
+    pnpm run build && \
+    pnpm prune --prod
 
 FROM node:${NODE_VERSION}-alpine
+
+# Install pnpm globally in the final stage
+RUN npm install -g pnpm
+
+ENV PNPM_HOME="/root/.local/share/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
 
 WORKDIR /app
 
