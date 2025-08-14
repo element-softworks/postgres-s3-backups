@@ -48,16 +48,28 @@ export const env = envsafe({
     default: '',
     allowEmpty: true,
   }),
-  BACKUP_PRODUCT: str({
-    desc: 'The product being backed up',
-    example: 'my-product',
+  BACKUP_PROJECT_NAME: str({
+    desc: 'The project being backed up',
+    example: 'my-project',
+    allowEmpty: true,
   }),
   BACKUP_ENV: str({
     desc: 'The environment being backed up (staging / uat / prod)',
     example: 'prod',
+    allowEmpty: true,
   }),
   BACKUP_FREQUENCY: str({
     desc: 'The frequency of the backup (daily / weekly / monthly)',
     example: 'daily',
+  }),
+  RAILWAY_ENVIRONMENT_NAME: str({
+    desc: 'Railway environment name',
+    example: 'staging',
+    allowEmpty: true,
+  }),
+  RAILWAY_PROJECT_NAME: str({
+    desc: 'Railway project name',
+    example: 'my-project',
+    allowEmpty: true,
   }),
 })
