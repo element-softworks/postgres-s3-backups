@@ -13,6 +13,7 @@ import { filesize } from "filesize";
 
 import { env } from "./env.js";
 import { createMD5 } from "./util.js";
+import z from "zod";
 
 const testS3Connection = async (client: S3Client, bucket: string) => {
 	try {
@@ -44,7 +45,7 @@ const testS3Connection = async (client: S3Client, bucket: string) => {
 	}
 };
 
-const uploadToS3 = async ({ name, path }: { name: string; path: string }) => {
+const uploadToS3 = async ({ name, path, subfolder }: { name: string; path: string; subfolder: string }) => {
 	console.log("Uploading backup to S3...");
 
 	const bucket = env.AWS_S3_BUCKET;
@@ -59,20 +60,9 @@ const uploadToS3 = async ({ name, path }: { name: string; path: string }) => {
 		clientOptions.endpoint = env.AWS_S3_ENDPOINT;
 	}
 
-	const subfolder = `${env.BACKUP_PRODUCT}/${env.BACKUP_ENV}/${env.BACKUP_FREQUENCY}`;
-	name = `${subfolder}/${name}`;
-
-	// Log the exact AWS S3 location
-	const location = env.AWS_S3_ENDPOINT
-		? `${env.AWS_S3_ENDPOINT}/${bucket}/${name}`
-		: `https://s3.${env.AWS_S3_REGION}.amazonaws.com/${bucket}/${name}`;
-
-	console.log(`File will be uploaded to: ${location}`);
-	console.log(`Bucket: ${bucket}, Key: ${name}, Region: ${env.AWS_S3_REGION}`);
-
 	const params: PutObjectCommandInput = {
 		Bucket: bucket,
-		Key: name,
+		Key: `${subfolder}/${name}`,
 		Body: createReadStream(path),
 	};
 
@@ -183,13 +173,35 @@ const deleteFile = async (path: string) => {
 export const backup = async () => {
 	console.log("Initiating DB backup...");
 
+	// Zod schema to transform the environment and project names
+	const envSchema = z.object({
+		environment: z.enum(["staging", "uat", "prod"]),
+		project: z.string().min(1).transform(val =>
+			val
+				.toLowerCase()
+				.replace(/[ /]/g, "-")
+				.replace(/[^a-z0-9-]/g, "")
+		),
+		frequency: z.enum(["daily", "weekly", "monthly"]),
+	});
+
+	const { environment, project, frequency } = envSchema.parse({
+		environment: env.RAILWAY_ENVIRONMENT_NAME || env.BACKUP_ENV,
+		project: env.RAILWAY_PROJECT_NAME || env.BACKUP_PROJECT_NAME,
+		frequency: env.BACKUP_FREQUENCY,
+	 });
+
+	console.log(`🌐 Environment: ${environment}`);
+	console.log(`🏢 Project: ${project}`);
+	console.log(`🔄 Frequency: ${frequency}`);
+
 	const date = new Date().toISOString();
 	const timestamp = date.replace(/[:.]+/g, "-");
-	const filename = `${env.BACKUP_PRODUCT}-${timestamp}.tar.gz`;
+	const filename = `${project}-${environment}-${timestamp}.tar.gz`;
 	const filepath = path.join(os.tmpdir(), filename);
 
 	await dumpToFile(filepath);
-	await uploadToS3({ name: filename, path: filepath });
+	await uploadToS3({ name: filename, path: filepath, subfolder: `${project}/${environment}/${frequency}` });
 	await deleteFile(filepath);
 
 	console.log("DB backup complete...");
