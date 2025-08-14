@@ -210,6 +210,8 @@ export const backup = async () => {
 	const filename = `${project}-${environment}-${timestamp}.tar.gz`;
 	const filepath = path.join(os.tmpdir(), filename);
 
+	console.log(`💾 Dumping DB to file: ${filepath}`);
+
 	await dumpToFile(filepath);
 	await uploadToS3({
 		name: filename,
