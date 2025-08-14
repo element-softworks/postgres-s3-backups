@@ -10,7 +10,7 @@ ENV PATH="$PNPM_HOME:$PATH"
 
 WORKDIR /app
 
-COPY package*.json tsconfig.json ./
+COPY package*.json pnpm-lock.yaml tsconfig.json ./
 COPY src ./src
 
 RUN pnpm install --frozen-lockfile && \
