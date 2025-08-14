@@ -16,7 +16,7 @@ A simple NodeJS application to backup your PostgreSQL database to S3 via a cron.
 - `SINGLE_SHOT_MODE`: Run a single backup on start and exit. Default: `true`.
 - `SUPPORT_OBJECT_LOCK`: Enable S3 Object Lock support (adds MD5 hash). Default: `true`.
 - `BACKUP_OPTIONS`: Extra `pg_dump` options. Default: empty.
-- `BACKUP_PRODUCT`: Product name for backup pathing (e.g., `my-product`). **Required**.
+- `BACKUP_PROJECT_NAME`: Product name for backup pathing (e.g., `my-project`). **Required**.
 - `BACKUP_ENV`: Environment name for backup pathing (e.g., `staging`, `uat`, `prod`). **Required**.
 - `BACKUP_FREQUENCY`: Frequency for backup pathing (e.g., `daily`, `weekly`, `monthly`). **Required**.
 

@@ -10,10 +10,8 @@ import {
 } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
 import { filesize } from "filesize";
-
-import { env } from "./env.js";
-import { createMD5 } from "./util.js";
 import z from "zod";
+import { createMD5 } from "./util.js";
 
 const testS3Connection = async (client: S3Client, bucket: string) => {
 	try {
@@ -45,19 +43,27 @@ const testS3Connection = async (client: S3Client, bucket: string) => {
 	}
 };
 
-const uploadToS3 = async ({ name, path, subfolder }: { name: string; path: string; subfolder: string }) => {
+const uploadToS3 = async ({
+	name,
+	path,
+	subfolder,
+}: {
+	name: string;
+	path: string;
+	subfolder: string;
+}) => {
 	console.log("Uploading backup to S3...");
 
-	const bucket = env.AWS_S3_BUCKET;
+	const bucket = process.env.AWS_S3_BUCKET || "";
 
 	const clientOptions: S3ClientConfig = {
-		region: env.AWS_S3_REGION,
-		forcePathStyle: env.AWS_S3_FORCE_PATH_STYLE,
+		region: process.env.AWS_S3_REGION || "eu-west-2",
+		forcePathStyle: process.env.AWS_S3_FORCE_PATH_STYLE === "true",
 	};
 
-	if (env.AWS_S3_ENDPOINT) {
-		console.log(`Using custom endpoint: ${env.AWS_S3_ENDPOINT}`);
-		clientOptions.endpoint = env.AWS_S3_ENDPOINT;
+	if (process.env.AWS_S3_ENDPOINT) {
+		console.log(`Using custom endpoint: ${process.env.AWS_S3_ENDPOINT}`);
+		clientOptions.endpoint = process.env.AWS_S3_ENDPOINT;
 	}
 
 	const params: PutObjectCommandInput = {
@@ -66,7 +72,7 @@ const uploadToS3 = async ({ name, path, subfolder }: { name: string; path: strin
 		Body: createReadStream(path),
 	};
 
-	if (env.SUPPORT_OBJECT_LOCK) {
+	if (process.env.SUPPORT_OBJECT_LOCK) {
 		console.log("MD5 hashing file...");
 
 		const md5Hash = await createMD5(path);
@@ -99,7 +105,7 @@ const uploadToS3 = async ({ name, path, subfolder }: { name: string; path: strin
 		console.error("HTTP Status:", error.$metadata?.httpStatusCode);
 
 		// Additional debugging for custom endpoints
-		if (env.AWS_S3_ENDPOINT) {
+		if (process.env.AWS_S3_ENDPOINT) {
 			console.error("Custom endpoint detected - this error often occurs when:");
 			console.error("1. The endpoint URL is incorrect");
 			console.error(
@@ -118,7 +124,7 @@ const dumpToFile = async (filePath: string) => {
 
 	await new Promise((resolve, reject) => {
 		exec(
-			`pg_dump --dbname=${env.BACKUP_DATABASE_URL} --format=tar ${env.BACKUP_OPTIONS} | gzip > ${filePath}`,
+			`pg_dump --dbname=${process.env.BACKUP_DATABASE_URL} --format=tar ${process.env.BACKUP_OPTIONS} | gzip > ${filePath}`,
 			(error, _stdout, stderr) => {
 				if (error) {
 					reject({ error: error, stderr: stderr.trimEnd() });
@@ -176,20 +182,24 @@ export const backup = async () => {
 	// Zod schema to transform the environment and project names
 	const envSchema = z.object({
 		environment: z.enum(["staging", "uat", "prod"]),
-		project: z.string().min(1).transform(val =>
-			val
-				.toLowerCase()
-				.replace(/[ /]/g, "-")
-				.replace(/[^a-z0-9-]/g, "")
-		),
+		project: z
+			.string()
+			.min(1)
+			.transform((val) =>
+				val
+					.toLowerCase()
+					.replace(/[ /]/g, "-")
+					.replace(/[^a-z0-9-]/g, ""),
+			),
 		frequency: z.enum(["daily", "weekly", "monthly"]),
 	});
 
 	const { environment, project, frequency } = envSchema.parse({
-		environment: env.RAILWAY_ENVIRONMENT_NAME || env.BACKUP_ENV,
-		project: env.RAILWAY_PROJECT_NAME || env.BACKUP_PROJECT_NAME,
-		frequency: env.BACKUP_FREQUENCY,
-	 });
+		environment: process.env.RAILWAY_ENVIRONMENT_NAME || process.env.BACKUP_ENV,
+		project:
+			process.env.RAILWAY_PROJECT_NAME || process.env.BACKUP_PROJECT_NAME,
+		frequency: process.env.BACKUP_FREQUENCY,
+	});
 
 	console.log(`🌐 Environment: ${environment}`);
 	console.log(`🏢 Project: ${project}`);
@@ -201,7 +211,11 @@ export const backup = async () => {
 	const filepath = path.join(os.tmpdir(), filename);
 
 	await dumpToFile(filepath);
-	await uploadToS3({ name: filename, path: filepath, subfolder: `${project}/${environment}/${frequency}` });
+	await uploadToS3({
+		name: filename,
+		path: filepath,
+		subfolder: `${project}/${environment}/${frequency}`,
+	});
 	await deleteFile(filepath);
 
 	console.log("DB backup complete...");
